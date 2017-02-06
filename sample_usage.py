@@ -2,9 +2,7 @@
 
 
 import socket
-import time
-from contextlib import closing
-from tcp_mitm import TcpMitm
+from tcp_mitm import RecvRoutineStopped, RunMitm
 from threading import Thread
 
 
@@ -20,7 +18,7 @@ def server_routine(port):
                 continue
             msg = data.decode("utf-8")
             print("Received by server: {}".format(msg))
-            if msg == "exit":
+            if msg.endswith("exit"):
                 break
         conn.close()
 
@@ -38,34 +36,42 @@ def client_routine(server_port, msgs):
     print("Client finished")
 
 
-def packet_forward(server_port, middle_port):
-    with closing(TcpMitm(server_port, middle_port)) as mitm:
-        receiver = mitm.recv()
-        # i = False
+def packet_forward(mitm):
+    while True:
+        try:
+            pkt = mitm.recv_from_queue()
+        except RecvRoutineStopped:
+            break
 
-        while True:
-            pkt = next(receiver)
-            # to check buffer overflowing
-            # if not i:
-            #     time.Sleep(5)
-            #     i = True
-            print("Mitm received {} bytes".format(len(pkt)))
-            mitm.send(pkt)
+        print("Mitm received {} bytes".format(len(pkt)))
+        src_port = pkt["TCP"].sport
 
-    print("Mitm finished")
+        if src_port == mitm.client_port:
+            mitm.send_to_server(pkt)
+        elif src_port == mitm.server_port:
+            mitm.send_to_client(pkt)
+
+    print("Packet forwarding finished")        
 
 
 if __name__ == "__main__":
     server_port = 20040
     middle_port = 10020
     msgs = ["aaaaaaa", "aaaa", "exit"]
-    ts = Thread(name="server", target=server_routine, args=(server_port, ))
-    ts.start()
-    tc = Thread(name="client", target=client_routine, args=(middle_port, msgs))
-    tc.start()
 
-    # tm = Thread(name="mitm", target=packet_forward, args=(server_port, middle_port))
-    packet_forward(server_port, middle_port)
 
-    tc.join()
-    ts.join()
+    with RunMitm(server_port, middle_port) as mitm:
+        thr_fwd = Thread(name="pkt_fwd", target=packet_forward, args=(mitm, ))
+        thr_server = Thread(name="server", target=server_routine, args=(server_port, ))
+        thr_client = Thread(name="client", target=client_routine, args=(middle_port, msgs))
+
+        thr_fwd.start()
+        thr_server.start()
+        thr_client.start()
+        # packet_forward(mitm)
+
+        thr_server.join()
+        thr_client.join()
+
+    thr_fwd.join()
+    print("Main finished")
