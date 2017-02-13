@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 
+import argparse
 import socket
 from tcp_mitm import RecvRoutineStopped, RunMitm
 from threading import Thread
@@ -54,9 +55,26 @@ def packet_forward(mitm):
     print("Packet forwarding finished")        
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="lol")
+    middle_port_help = "client and server will be sending their messages here"
+    middle_port_help += " (I hope you set up dropping RSTs)"
+    parser.add_argument("--middle_port", type=int, help=middle_port_help,
+        required=True, metavar="middle_port_num")
+    parser.add_argument("--server_port", type=int, help="server port",
+        required=True, metavar="serv_port_num")
+    args = parser.parse_args()
+
+    assert_msg = "Server must be listening not on the middle port!"
+    assert args.middle_port != args.server_port, assert_msg
+    return args
+
+
 if __name__ == "__main__":
-    server_port = 20040
-    middle_port = 10020
+    args = parse_args()
+    server_port, middle_port = args.server_port, args.middle_port
+
+
     msgs = ["aaaaaaa", "aaaa", "exit"]
 
 
@@ -68,7 +86,6 @@ if __name__ == "__main__":
         thr_fwd.start()
         thr_server.start()
         thr_client.start()
-        # packet_forward(mitm)
 
         thr_server.join()
         thr_client.join()
