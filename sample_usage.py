@@ -3,7 +3,8 @@
 
 import argparse
 import socket
-from tcp_mitm import RecvRoutineStopped, RunMitm
+from functools import partial
+from tcp_mitm import NoMessages, RecvRoutineStopped, RunMitm
 from threading import Thread
 
 
@@ -32,27 +33,42 @@ def client_routine(server_port, msgs):
         sock.connect(("127.0.0.1", server_port))
 
         for msg in msgs:
+            print("Sent by client: ", msg)
             sock.send(msg.encode("utf-8"))
 
     print("Client finished")
 
 
+def recv_any_pkt_from(mitm):
+    recvs = [
+        (partial(mitm.recv_from_client, block=False), "client"),
+        (partial(mitm.recv_from_server, block=False), "server")
+    ]
+
+    while True:
+        for recv, src in recvs:
+            try:
+                yield recv(), src
+            except NoMessages:
+                pass
+            continue
+
+
 def packet_forward(mitm):
+    get_pkt = recv_any_pkt_from(mitm)
+
     while True:
         try:
-            pkt = mitm.recv_from_queue()
+            pkt, src = next(get_pkt)
         except RecvRoutineStopped:
             break
 
-        print("Mitm received {} bytes".format(len(pkt)))
-        src_port = pkt["TCP"].sport
-
-        if src_port == mitm.client_port:
+        if src == "client":
             mitm.send_to_server(pkt)
-        elif src_port == mitm.server_port:
+        elif src == "server":
             mitm.send_to_client(pkt)
 
-    print("Packet forwarding finished")        
+    print("Packet forwarding finished")
 
 
 def parse_args():
@@ -60,9 +76,9 @@ def parse_args():
     middle_port_help = "client and server will be sending their messages here"
     middle_port_help += " (I hope you set up dropping RSTs)"
     parser.add_argument("--middle_port", type=int, help=middle_port_help,
-        required=True, metavar="middle_port_num")
+                        required=True, metavar="middle_port_num")
     parser.add_argument("--server_port", type=int, help="server port",
-        required=True, metavar="serv_port_num")
+                        required=True, metavar="serv_port_num")
     args = parser.parse_args()
 
     assert_msg = "Server must be listening not on the middle port!"
@@ -74,9 +90,7 @@ if __name__ == "__main__":
     args = parse_args()
     server_port, middle_port = args.server_port, args.middle_port
 
-
     msgs = ["aaaaaaa", "aaaa", "exit"]
-
 
     with RunMitm(server_port, middle_port) as mitm:
         thr_fwd = Thread(name="pkt_fwd", target=packet_forward, args=(mitm, ))
