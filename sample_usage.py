@@ -5,7 +5,7 @@ import argparse
 import socket
 from contextlib import closing
 from functools import partial
-from tcp_mitm import NoMessages, RecvRoutineStopped, RunMitm
+from tcp_mitm import NoMessages, RecvRoutineStopped, TcpMitm, run_recv
 from threading import Thread
 
 
@@ -93,7 +93,8 @@ if __name__ == "__main__":
 
     msgs = ["aaaaaaa", "aaaa", "exit"]
 
-    with RunMitm(server_port, middle_port) as mitm:
+    mitm = TcpMitm(server_port, middle_port)
+    with run_recv(mitm):
         thr_fwd = Thread(name="pkt_fwd", target=packet_forward, args=(mitm, ))
         thr_server = Thread(name="server", target=server_routine, args=(server_port, ))
         thr_client = Thread(name="client", target=client_routine, args=(middle_port, msgs))

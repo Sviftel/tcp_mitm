@@ -7,13 +7,11 @@ from threading import Thread
 
 
 @contextmanager
-def RunMitm(server_port, middle_port):
-    mitm = TcpMitm(server_port, middle_port)
+def run_recv(mitm):
     tr = Thread(name="mitm_recv", target=mitm.recv_routine)
     tr.start()
-
     try:
-        yield mitm
+        yield
     finally:
         mitm.run_recv = False
         tr.join()
