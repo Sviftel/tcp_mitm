@@ -3,6 +3,7 @@
 
 import argparse
 import socket
+from contextlib import closing
 from functools import partial
 from tcp_mitm import NoMessages, RecvRoutineStopped, RunMitm
 from threading import Thread
@@ -14,15 +15,15 @@ def server_routine(port):
         sock.listen(1)
 
         conn, addr = sock.accept()
-        while True:
-            data, _ = conn.recvfrom(1500)
-            if not data:
-                continue
-            msg = data.decode("utf-8")
-            print("Received by server: {}".format(msg))
-            if msg.endswith("exit"):
-                break
-        conn.close()
+        with closing(conn):
+            while True:
+                data, _ = conn.recvfrom(1500)
+                if not data:
+                    continue
+                msg = data.decode("utf-8")
+                print("Received by server: {}".format(msg))
+                if msg.endswith("exit"):
+                    break
 
     print("Server finished")
 
