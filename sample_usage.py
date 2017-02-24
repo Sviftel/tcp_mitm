@@ -2,10 +2,10 @@
 
 
 from argparse import ArgumentParser
-from connector import Connector, make_connector_args, simple_packet_forwarding
 from functools import partial
-from sloppiness import make_sloppy_args
-from utils import add_all_args
+from tcpmitm.connector import Connector, make_connector_args, simple_packet_forwarding
+from tcpmitm.sloppiness import make_sloppy_args
+from tcpmitm.utils import add_all_args
 
 
 def server_routine(server_conn):

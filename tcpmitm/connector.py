@@ -1,7 +1,7 @@
 import socket
 from contextlib import contextmanager
 from functools import partial
-from tcp_mitm import NoMessages, RecvRoutineStopped, TcpMitm, run_recv
+from .tcp_mitm import NoMessages, RecvRoutineStopped, TcpMitm, run_recv
 from threading import Lock, Thread
 
 
@@ -11,9 +11,9 @@ def make_connector_args(parser):
     middle_port_help = "client and server will be sending their messages here"
     middle_port_help += " (I hope you set up dropping RSTs)"
     group.add_argument("--middle_port", type=int, help=middle_port_help,
-                        required=True, metavar="middle_port_num")
+                       required=True, metavar="middle_port_num")
     group.add_argument("--server_port", type=int, help="server port",
-                        required=True, metavar="serv_port_num")
+                       required=True, metavar="serv_port_num")
 
     parsed_args = yield
 

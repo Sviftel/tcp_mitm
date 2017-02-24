@@ -10,7 +10,6 @@ def check_and_break(pkt, breaker):
     return breaker.mess_up(pkt)
 
 
-
 class FinDelayer:
     """adds a delay if got FIN packet"""
     def __init__(self, sleep_duration):
