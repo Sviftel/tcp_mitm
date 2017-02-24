@@ -5,6 +5,22 @@ from tcp_mitm import NoMessages, RecvRoutineStopped, TcpMitm, run_recv
 from threading import Lock, Thread
 
 
+def make_connector_args(parser):
+    group = parser.add_argument_group("connection parameters")
+
+    middle_port_help = "client and server will be sending their messages here"
+    middle_port_help += " (I hope you set up dropping RSTs)"
+    group.add_argument("--middle_port", type=int, help=middle_port_help,
+                        required=True, metavar="middle_port_num")
+    group.add_argument("--server_port", type=int, help="server port",
+                        required=True, metavar="serv_port_num")
+
+    parsed_args = yield
+
+    assert_msg = "Server must be listening not on the middle port!"
+    assert parsed_args.middle_port != parsed_args.server_port, assert_msg
+
+
 class LockedValue:
     def __init__(self, v):
         self._lock = Lock()
@@ -45,7 +61,7 @@ class Connector:
             thr_client.join()
 
         thr_fwd.join()
-        print("Connection completely finished")
+        print("Mitm connection closed")
 
 
 class Server:
@@ -83,7 +99,7 @@ class Client:
         print("Client finished")
 
 
-def simple_packet_forwarding(mitm):
+def simple_packet_forwarding(mitm, processing):
     def recv_any_pkt():
         recvs = [
             (partial(mitm.recv_from_client, block=False), "client"),
@@ -105,9 +121,9 @@ def simple_packet_forwarding(mitm):
         except RecvRoutineStopped:
             break
 
-        if src == "client":
-            mitm.send_to_server(pkt)
-        elif src == "server":
-            mitm.send_to_client(pkt)
+        new_pkt = processing(pkt)
 
-    print("Packet forwarding finished")
+        if src == "client":
+            mitm.send_to_server(new_pkt)
+        elif src == "server":
+            mitm.send_to_client(new_pkt)

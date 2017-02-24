@@ -2,8 +2,10 @@
 
 
 from argparse import ArgumentParser
-from connector import Connector, simple_packet_forwarding
+from connector import Connector, make_connector_args, simple_packet_forwarding
 from functools import partial
+from sloppiness import make_sloppy_args
+from utils import add_all_args
 
 
 def server_routine(server_conn):
@@ -25,30 +27,20 @@ def client_routine(client_conn, msgs):
             conn.send(msg.encode("utf-8"))
 
 
-def parse_args():
-    parser = ArgumentParser(description="lol")
-    middle_port_help = "client and server will be sending their messages here"
-    middle_port_help += " (I hope you set up dropping RSTs)"
-    parser.add_argument("--middle_port", type=int, help=middle_port_help,
-                        required=True, metavar="middle_port_num")
-    parser.add_argument("--server_port", type=int, help="server port",
-                        required=True, metavar="serv_port_num")
-    args = parser.parse_args()
-
-    assert_msg = "Server must be listening not on the middle port!"
-    assert args.middle_port != args.server_port, assert_msg
-    return args
-
-
 if __name__ == "__main__":
-    args = parse_args()
-    server_port, middle_port = args.server_port, args.middle_port
+    parser = ArgumentParser(description="Brief example of tcp mitm usage")
+    args, _, check_and_break = add_all_args(parser,
+                                            make_connector_args,
+                                            make_sloppy_args)
 
+    server_port, middle_port = args.server_port, args.middle_port
     msgs = ["aaaaaaa", "aaaa", "exit"]
 
-    Connector = Connector(server_port, middle_port)
-    Connector.connect(
-        partial(server_routine, server_conn=Connector.server),
-        partial(simple_packet_forwarding, mitm=Connector.mitm),
-        partial(client_routine, client_conn=Connector.client, msgs=msgs)
+    connector = Connector(server_port, middle_port)
+    connector.connect(
+        partial(server_routine, server_conn=connector.server),
+        partial(simple_packet_forwarding,
+                mitm=connector.mitm,
+                processing=check_and_break),
+        partial(client_routine, client_conn=connector.client, msgs=msgs)
     )
