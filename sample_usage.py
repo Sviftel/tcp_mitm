@@ -11,7 +11,7 @@ from tcpmitm.utils import add_all_args
 def server_routine(server_conn):
     with server_conn as conn:
         while True:
-            data, _ = conn.recvfrom(1500)
+            data = conn.recv(1500)
             if not data:
                 continue
             msg = data.decode("utf-8")

@@ -60,6 +60,8 @@ class Connector:
             thr_server.join()
             thr_client.join()
 
+            # TODO: wait for forwarder to end right here!
+
         thr_fwd.join()
         print("Mitm connection closed")
 
