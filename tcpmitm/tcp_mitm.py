@@ -39,6 +39,7 @@ class TcpMitm:
     def __init__(self, server_port, middle_port):
         self._BLOCKING_TIMEOUT = 2.0
         self._TRG_ADDR = ("127.0.0.1", 0)
+        self._buf_size = 65536
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
         self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
@@ -95,7 +96,7 @@ class TcpMitm:
 
         while self.run_recv:
             try:
-                data, addr = self.sock.recvfrom(1500)
+                data, addr = self.sock.recvfrom(self._buf_size)
             except socket.timeout:
                 continue
 
