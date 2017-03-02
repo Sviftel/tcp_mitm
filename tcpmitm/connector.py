@@ -123,9 +123,9 @@ def simple_packet_forwarding(mitm, processing):
         except RecvRoutineStopped:
             break
 
-        new_pkt = processing(pkt)
+        processing(pkt)
 
         if src == "client":
-            mitm.send_to_server(new_pkt)
+            mitm.send_to_server(pkt)
         elif src == "server":
-            mitm.send_to_client(new_pkt)
+            mitm.send_to_client(pkt)

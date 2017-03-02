@@ -41,7 +41,9 @@ class TcpMitm:
         self._TRG_ADDR = ("127.0.0.1", 0)
         self._buf_size = 65536
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+        self.sock = socket.socket(socket.AF_INET,
+                                  socket.SOCK_RAW,
+                                  socket.IPPROTO_TCP)
         self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
         self.sock.settimeout(self._BLOCKING_TIMEOUT)
 
@@ -108,19 +110,21 @@ class TcpMitm:
                 continue
             tcp_pkt = ip_pkt["TCP"]
 
-            # if client's port is still unknown and incoming packet "goes from him"
-            if not self.client_port and tcp_pkt.flags == 2 and tcp_pkt.dport == self.middle_port:
-                self.client_port = tcp_pkt.sport
+            # if client's port is still unknown
+            if not self.client_port:
+                # and incoming packet is SYN, goes to server
+                if tcp_pkt.flags == 2 and tcp_pkt.dport == self.middle_port:
+                    self.client_port = tcp_pkt.sport
 
-            known_host = tcp_pkt.sport == self.client_port or tcp_pkt.sport == self.server_port
-            if tcp_pkt.dport != self.middle_port or not known_host:
+            sport, dport = tcp_pkt.sport, tcp_pkt.dport
+
+            if sport == self.client_port and dport == self.middle_port:
+                self._client_recv_q.put(ip_pkt)
                 continue
 
-            source_is_client = tcp_pkt.sport == self.client_port
-            if source_is_client:
-                self._client_recv_q.put(ip_pkt)
-            else:
+            if sport == self.server_port and dport == self.middle_port:
                 self._server_recv_q.put(ip_pkt)
+                continue
 
         self._running_recv = False
 
