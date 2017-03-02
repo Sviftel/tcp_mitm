@@ -19,7 +19,7 @@ if [ "$?" -eq 0 ]; then
     shift
 
     if [ "$#" -gt "0" ]; then
-        ip netns exec "$ns_name" ./"$script_name" --server_port "$server_port" --middle_port "$middle_port" "$*"
+        ip netns exec "$ns_name" ./"$script_name" --server_port "$server_port" --middle_port "$middle_port" $*
     else
         ip netns exec "$ns_name" ./"$script_name" --server_port "$server_port" --middle_port "$middle_port"
     fi

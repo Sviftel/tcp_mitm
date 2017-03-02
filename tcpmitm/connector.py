@@ -6,14 +6,14 @@ from threading import Lock, Thread
 
 
 def make_connector_args(parser):
-    group = parser.add_argument_group("connection parameters")
+    group = parser.add_argument_group("connection")
 
     middle_port_help = "client and server will be sending their messages here"
     middle_port_help += " (I hope you set up dropping RSTs)"
     group.add_argument("--middle_port", type=int, help=middle_port_help,
-                       required=True, metavar="middle_port_num")
+                       required=True)
     group.add_argument("--server_port", type=int, help="server port",
-                       required=True, metavar="serv_port_num")
+                       required=True)
 
     parsed_args = yield
 

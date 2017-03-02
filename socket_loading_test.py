@@ -109,16 +109,31 @@ def client_routine(client_conn, data_manager):
             conn.send(data)
 
 
+def make_traffic_rates_args(parser):
+    group = parser.add_argument_group("traffic load")
+
+    block_size_help = """
+            size of one block of random data send by client at once (in MBs)
+        """
+    group.add_argument("--block_size", type=int, help=block_size_help,
+                       default=10)
+
+    n_times_help = "number of times to generate and send random data block"
+    group.add_argument("--n_times", type=int, help=n_times_help, default=1)
+    yield
+
 if __name__ == "__main__":
     desc = "Module tests tcp mitm's work on high loads"
     parser = ArgumentParser(description=desc)
-    args, _, check_and_break = add_all_args(parser,
-                                            make_connector_args,
-                                            make_sloppy_args)
+    args, _, check_and_break, _ = add_all_args(parser,
+                                               make_connector_args,
+                                               make_sloppy_args,
+                                               make_traffic_rates_args)
 
     server_port, middle_port = args.server_port, args.middle_port
+    block_size, n_times = args.block_size * 1024 * 1024, args.n_times
 
-    with DataManager(array_size=200000000, n_times=10) as data_manager:
+    with DataManager(array_size=block_size, n_times=n_times) as data_manager:
         connector = Connector(server_port, middle_port)
         connector.connect(
             partial(server_routine,
