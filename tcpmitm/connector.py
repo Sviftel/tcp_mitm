@@ -20,7 +20,7 @@ def make_connector_args(parser):
     assert_msg = "Server must be listening not on the middle port!"
     assert parsed_args.middle_port != parsed_args.server_port, assert_msg
 
-
+# XXX move this to utils.py
 class LockedValue:
     def __init__(self, v):
         self._lock = Lock()
@@ -37,7 +37,13 @@ class LockedValue:
     def __bool__(self):
         return bool(self.get())
 
-
+# XXX Bad naming, not clear responsibility.
+# You already have Client and Server classes
+# that can be self-contained. Add a thread into them
+# and that's all.
+# Do the same for mitm MitmRecvLoopThread.
+# XXX We need to discuss resource management in the app (threads, files, shared vars, ...).
+# Now I see that you easily move resources around the code - this makes it complicated.
 class Connector:
     def __init__(self, server_port, middle_port):
         self.server = Server(server_port, LockedValue(False))
@@ -65,7 +71,8 @@ class Connector:
         thr_fwd.join()
         print("Mitm connection closed")
 
-
+# XXX make all not exported classes private for this module.
+# (add _ as name prefix)
 class Server:
     def __init__(self, port, start_flag):
         self._port = port
@@ -100,7 +107,9 @@ class Client:
         self.sock.close()
         print("Client finished")
 
-
+# XXX This should be part of new algs module.
+# Also the name of the algorithm should be something like this:
+# packet_transorm_and_forward_loop(mitm, transfromer)
 def simple_packet_forwarding(mitm, processing):
     def recv_any_pkt():
         recvs = [
@@ -109,6 +118,9 @@ def simple_packet_forwarding(mitm, processing):
         ]
 
         while True:
+            # XXX nonblocking syscalls running in a loop
+            # burn cpu cycles a lot. So you can use asynchronous blocking IO
+            # here. (select, poll, epoll syscalls)
             for recv, src in recvs:
                 try:
                     yield recv(), src

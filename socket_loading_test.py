@@ -10,7 +10,10 @@ from tcpmitm.sloppiness import make_sloppy_args
 from tcpmitm.utils import add_all_args
 from threading import Condition
 
-
+# XXX looks like data generation is overcomplicated
+# (probably because of thread pool). Will discuss this
+# during skype call. THe first my question would be
+# "What data DataManager does and why it does it?"
 class DataManager:
     def __init__(self, array_size, n_times):
         self._array_size = array_size
@@ -21,6 +24,8 @@ class DataManager:
         self._array_cond, self._array = Condition(), None
 
     def __enter__(self):
+        # XXX running unbounded number of threads is a really bad idea.
+        # Will discuss why.
         self._executor = ThreadPoolExecutor(max_workers=self._n_times)
         if self._n_times:
             print("Generating block...")
