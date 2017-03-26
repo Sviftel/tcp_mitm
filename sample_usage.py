@@ -3,7 +3,8 @@
 
 from argparse import ArgumentParser
 from functools import partial
-from tcpmitm.connector import Connector, make_connector_args, simple_packet_forwarding
+from tcpmitm.algs import packet_transform_and_forward_loop
+from tcpmitm.connector import Connector, make_connector_args
 from tcpmitm.sloppiness import make_sloppy_args
 from tcpmitm.utils import add_all_args
 
@@ -39,8 +40,8 @@ if __name__ == "__main__":
     connector = Connector(server_port, middle_port)
     connector.connect(
         partial(server_routine, server_conn=connector.server),
-        partial(simple_packet_forwarding,
+        partial(packet_transform_and_forward_loop,
                 mitm=connector.mitm,
-                processing=check_and_break),
+                transform=check_and_break),
         partial(client_routine, client_conn=connector.client, msgs=msgs)
     )

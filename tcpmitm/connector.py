@@ -1,8 +1,8 @@
 import socket
-from contextlib import contextmanager
-from functools import partial
+from threading import Thread
+
+import .utils
 from .tcp_mitm import NoMessages, RecvRoutineStopped, TcpMitm, run_recv
-from threading import Lock, Thread
 
 
 def make_connector_args(parser):
@@ -20,22 +20,6 @@ def make_connector_args(parser):
     assert_msg = "Server must be listening not on the middle port!"
     assert parsed_args.middle_port != parsed_args.server_port, assert_msg
 
-# XXX move this to utils.py
-class LockedValue:
-    def __init__(self, v):
-        self._lock = Lock()
-        self._v = v
-
-    def set(self, v):
-        with self._lock:
-            self._v = v
-
-    def get(self):
-        with self._lock:
-            return self._v
-
-    def __bool__(self):
-        return bool(self.get())
 
 # XXX Bad naming, not clear responsibility.
 # You already have Client and Server classes
@@ -46,7 +30,7 @@ class LockedValue:
 # Now I see that you easily move resources around the code - this makes it complicated.
 class Connector:
     def __init__(self, server_port, middle_port):
-        self.server = Server(server_port, LockedValue(False))
+        self.server = Server(server_port, utils.LockedValue(False))
         self.client = Client(middle_port)
         self.mitm = TcpMitm(server_port, middle_port)
 
@@ -106,38 +90,3 @@ class Client:
     def __exit__(self, *exc_info):
         self.sock.close()
         print("Client finished")
-
-# XXX This should be part of new algs module.
-# Also the name of the algorithm should be something like this:
-# packet_transorm_and_forward_loop(mitm, transfromer)
-def simple_packet_forwarding(mitm, processing):
-    def recv_any_pkt():
-        recvs = [
-            (partial(mitm.recv_from_client, block=False), "client"),
-            (partial(mitm.recv_from_server, block=False), "server")
-        ]
-
-        while True:
-            # XXX nonblocking syscalls running in a loop
-            # burn cpu cycles a lot. So you can use asynchronous blocking IO
-            # here. (select, poll, epoll syscalls)
-            for recv, src in recvs:
-                try:
-                    yield recv(), src
-                except NoMessages:
-                    pass
-                continue
-
-    get_pkt = recv_any_pkt()
-    while True:
-        try:
-            pkt, src = next(get_pkt)
-        except RecvRoutineStopped:
-            break
-
-        processing(pkt)
-
-        if src == "client":
-            mitm.send_to_server(pkt)
-        elif src == "server":
-            mitm.send_to_client(pkt)
