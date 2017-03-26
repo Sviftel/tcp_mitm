@@ -166,3 +166,9 @@ class TcpMitm:
         del pkt['IP'].chksum, pkt['TCP'].chksum
         raw_pkt = bytes(pkt)
         self.sock.sendto(raw_pkt, self._TRG_ADDR)
+
+    def from_client_to_server(self, pkt):
+        return pkt.sport == self.client_port and pkt.dport == self.middle_port
+
+    def from_server_to_client(self, pkt):
+        return pkt.sport == self.server_port and pkt.dport == self.middle_port

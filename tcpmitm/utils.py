@@ -1,5 +1,5 @@
-from threading import Thread
-from Queue import Queue
+from threading import Lock, Thread
+from queue import Queue
 
 
 def add_all_args(parser, *args_makers):
@@ -40,6 +40,7 @@ class LockedValue:
 
 def select_from_functions(*producers):
     combined = Queue()
+
     def listen_and_forward(src, produce):
         while True:
             try:

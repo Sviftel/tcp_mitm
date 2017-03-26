@@ -11,6 +11,7 @@ from tcpmitm.sloppiness import make_sloppy_args
 from tcpmitm.utils import add_all_args
 from threading import Condition
 
+
 # XXX looks like data generation is overcomplicated
 # (probably because of thread pool). Will discuss this
 # during skype call. THe first my question would be

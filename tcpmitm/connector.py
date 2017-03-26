@@ -1,8 +1,8 @@
 import socket
 from threading import Thread
 
-import .utils
-from .tcp_mitm import NoMessages, RecvRoutineStopped, TcpMitm, run_recv
+import tcpmitm.utils as utils
+from .tcp_mitm import TcpMitm, run_recv
 
 
 def make_connector_args(parser):
@@ -54,6 +54,7 @@ class Connector:
 
         thr_fwd.join()
         print("Mitm connection closed")
+
 
 # XXX make all not exported classes private for this module.
 # (add _ as name prefix)
